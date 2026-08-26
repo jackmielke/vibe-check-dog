@@ -19,6 +19,8 @@ struct TodayView: View {
     @State private var revealed = false
     @AppStorage("mascot") private var mascotRaw: String = Mascot.original.rawValue
 
+    private var mascot: Mascot { Mascot(rawValue: mascotRaw) ?? .original }
+
     private var mood: DogMood {
         switch phase {
         case .prompt:  return .waiting
@@ -33,13 +35,13 @@ struct TodayView: View {
             GeometryReader { geo in
                 ScrollView {
                     VStack(spacing: 18) {
-                        MascotView(mascot: Mascot(rawValue: mascotRaw) ?? .original,
+                        MascotView(mascot: mascot,
                                    mood: mood,
                                    size: isResult ? 132 : 210)
                             .accessibilityHidden(true)
                             .animation(.spring(response: 0.45, dampingFraction: 0.8), value: isResult)
 
-                        speechBubble
+                        if !isResult { speechBubble }
 
                         switch phase {
                         case .prompt:  promptControls
@@ -130,7 +132,6 @@ struct TodayView: View {
                 .font(Theme.display(80, .black))
                 .foregroundStyle(Theme.scoreColor(check.score))
                 .monospacedDigit()
-                .contentTransition(.numericText())
                 .accessibilityIdentifier("vibeScore")
 
             Text(check.analysis)
@@ -174,7 +175,7 @@ struct TodayView: View {
             } label: {
                 Group {
                     if posting { ProgressView().tint(Theme.bg) }
-                    else { Label("Post as \(auth.postingName)", systemImage: "trophy.fill") }
+                    else { Label("Post to leaderboard", systemImage: "trophy.fill") }
                 }
                 .font(Theme.display(16, .bold))
                 .frame(maxWidth: .infinity)
@@ -185,13 +186,13 @@ struct TodayView: View {
             .disabled(posting)
         } else {
             VStack(spacing: 8) {
-                Text("Add a name to put this on the leaderboard. Until then it stays on your phone.")
+                Text("Your check stays on this phone until you post it.")
                     .font(.footnote).foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                 NavigationLink {
                     ProfileView()
                 } label: {
-                    Text("Set up posting")
+                    Text("Post")
                         .font(Theme.display(16, .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
@@ -224,7 +225,7 @@ struct TodayView: View {
         line = DogLines.thinking.randomElement() ?? "Hold on."
         SFX.thinking()
         do {
-            let rating = try await VibeAPI.analyze(image: image)
+            let rating = try await VibeAPI.analyze(image: image, persona: mascot.persona)
             let check = store.record(score: rating.score, analysis: rating.analysis,
                                      image: image, posted: false)
             withAnimation {
@@ -254,9 +255,9 @@ struct TodayView: View {
         var step = 0
         Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { t in
             step += 1
-            withAnimation(.linear(duration: interval)) {
-                shownScore = Int(Double(target) * Double(step) / Double(steps))
-            }
+            // Set it straight, with no per-tick animation: animating each
+            // increment made the digits stutter and ghost into each other.
+            shownScore = Int(Double(target) * Double(step) / Double(steps))
             if step % 3 == 0 { SFX.tick() }
             if step >= steps {
                 t.invalidate()
@@ -272,7 +273,8 @@ struct TodayView: View {
         posting = true
         defer { posting = false }
         do {
-            _ = try await VibeAPI.submit(image: image, name: auth.postingName, ownerKey: auth.ownerKey)
+            _ = try await VibeAPI.submit(image: image, name: auth.postingName,
+                                         ownerKey: auth.ownerKey, persona: mascot.persona)
             store.markPosted(check)
             if let updated = store.checks.first(where: { $0.id == check.id }) {
                 withAnimation { phase = .result(updated) }

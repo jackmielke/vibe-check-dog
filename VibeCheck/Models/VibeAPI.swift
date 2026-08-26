@@ -60,8 +60,8 @@ enum VibeAPI {
     }
 
     /// Scores a photo without posting it anywhere. Used before sign-in.
-    static func analyze(image: UIImage) async throws -> Rating {
-        let payload = ["imageData": image.vibeDataURL()]
+    static func analyze(image: UIImage, persona: String) async throws -> Rating {
+        let payload = ["imageData": image.vibeDataURL(), "persona": persona]
         let body = try JSONSerialization.data(withJSONObject: payload)
         let data = try await send(request("analyze-vibe", method: "POST", body: body))
         guard let r = try? JSONDecoder().decode(Rating.self, from: data) else { throw APIError.decoding }
@@ -70,8 +70,9 @@ enum VibeAPI {
 
     /// Scores a photo, uploads it, and puts it on the public leaderboard.
     /// `ownerKey` is what later lets this device delete its own posts.
-    static func submit(image: UIImage, name: String, ownerKey: String) async throws -> LeaderboardEntry {
-        let payload = ["imageData": image.vibeDataURL(), "name": name, "ownerKey": ownerKey]
+    static func submit(image: UIImage, name: String, ownerKey: String, persona: String) async throws -> LeaderboardEntry {
+        let payload = ["imageData": image.vibeDataURL(), "name": name,
+                       "ownerKey": ownerKey, "persona": persona]
         let body = try JSONSerialization.data(withJSONObject: payload)
         let data = try await send(request("submit-vibe", method: "POST", body: body))
         struct Wrapper: Decodable { let success: Bool; let data: LeaderboardEntry }

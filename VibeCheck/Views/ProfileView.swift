@@ -101,23 +101,27 @@ struct ProfileView: View {
             Text("WHO JUDGES YOU")
                 .font(.caption.weight(.bold)).tracking(1.2)
                 .foregroundStyle(Theme.muted)
-            HStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(Mascot.allCases) { m in
                     Button {
                         SFX.tap()
                         mascotRaw = m.rawValue
                     } label: {
-                        VStack(spacing: 8) {
-                            MascotView(mascot: m, size: 66)
+                        VStack(spacing: 6) {
+                            MascotView(mascot: m, size: 72)
                             Text(m.title)
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 14, weight: .bold))
+                                .lineLimit(1)
                             Text(m.blurb)
                                 .font(.caption2)
                                 .foregroundStyle(Theme.muted)
                                 .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .frame(height: 28, alignment: .top)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 14)
                         .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .fill(mascotRaw == m.rawValue ? Theme.accent.opacity(0.16) : Theme.bgLift)

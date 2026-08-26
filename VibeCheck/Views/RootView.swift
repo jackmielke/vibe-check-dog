@@ -6,7 +6,7 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack { TodayView() }
-                .tabItem { Label("Today", systemImage: "pawprint.fill") }
+                .tabItem { Label("Today", systemImage: "house.fill") }
                 .tag(0)
             NavigationStack { LeaderboardView() }
                 .tabItem { Label("Leaderboard", systemImage: "trophy.fill") }

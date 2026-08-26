@@ -40,6 +40,8 @@ struct DogView: View {
     var size: CGFloat = 240
     /// The icon artwork wants the head on its own, without the hoodie.
     var showBody: Bool = true
+    /// Eyewear tells the characters apart at a glance.
+    var accessory: DogAccessory = .none
 
     @State private var blink = false
     @State private var breathe = false
@@ -106,6 +108,58 @@ struct DogView: View {
             eyes
             brows
             cap
+            eyewear
+        }
+    }
+
+    @ViewBuilder
+    private var eyewear: some View {
+        switch accessory {
+        case .none:
+            EmptyView()
+        case .sunglasses:
+            // Two lenses and a bridge, not one bar - a single wide rectangle
+            // reads as a censor strip rather than shades.
+            ZStack {
+                ForEach([-1.0, 1.0], id: \.self) { side in
+                    RoundedRectangle(cornerRadius: 13 * u, style: .continuous)
+                        .fill(Color.black.opacity(0.88))
+                        .frame(width: 46 * u, height: 34 * u)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 13 * u, style: .continuous)
+                                .fill(Color.white.opacity(0.18))
+                                .frame(width: 46 * u, height: 11 * u)
+                                .offset(y: -9 * u)
+                        )
+                        .offset(x: side * 34 * u)
+                }
+                Rectangle()
+                    .fill(Color.black.opacity(0.88))
+                    .frame(width: 24 * u, height: 7 * u)
+                    .offset(y: -3 * u)
+                // arms reaching back toward the ears
+                ForEach([-1.0, 1.0], id: \.self) { side in
+                    Capsule()
+                        .fill(Color.black.opacity(0.8))
+                        .frame(width: 22 * u, height: 6 * u)
+                        .offset(x: side * 66 * u, y: -6 * u)
+                }
+            }
+            .offset(y: -15 * u)
+        case .roundGlasses:
+            ZStack {
+                ForEach([-1.0, 1.0], id: \.self) { side in
+                    Circle()
+                        .strokeBorder(Theme.accent, lineWidth: 5 * u)
+                        .background(Circle().fill(Color.white.opacity(0.10)))
+                        .frame(width: 42 * u, height: 42 * u)
+                        .offset(x: side * 34 * u)
+                }
+                Rectangle()
+                    .fill(Theme.accent)
+                    .frame(width: 26 * u, height: 4.5 * u)
+            }
+            .offset(y: -14 * u)
         }
     }
 
@@ -219,6 +273,11 @@ struct DogView: View {
             }
         }
     }
+}
+
+/// What the character is wearing on its face.
+enum DogAccessory {
+    case none, sunglasses, roundGlasses
 }
 
 /// A flat mouth line that turns down slightly at both ends.

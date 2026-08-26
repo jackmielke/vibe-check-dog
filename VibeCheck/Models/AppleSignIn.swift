@@ -48,10 +48,14 @@ final class AppleSignIn: ObservableObject {
         switch result {
         case .failure(let error):
             // A user-cancelled sheet is not worth shouting about; anything else is.
+            let ns = error as NSError
             if let asError = error as? ASAuthorizationError, asError.code == .canceled {
                 lastError = nil
             } else {
-                lastError = "Apple sign-in failed: \(error.localizedDescription). You can just type a name instead."
+                // The domain and code are what actually identify the failure;
+                // localizedDescription for these is usually just "unknown".
+                lastError = "Apple sign-in failed (\(ns.domain) \(ns.code)): "
+                    + "\(error.localizedDescription). Type a name below instead."
             }
             return
         case .success(let auth):

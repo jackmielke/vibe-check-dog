@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const { imageData, name, ownerKey } = await req.json();
+    const { imageData, name, ownerKey, persona } = await req.json();
     if (!imageData) return json({ error: "imageData is required" }, 400);
 
     const cleanName = String(name ?? "").trim().slice(0, 40) || "Anonymous";
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     const scored = await fetch(`${supabaseUrl}/functions/v1/analyze-vibe`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-      body: JSON.stringify({ imageData }),
+      body: JSON.stringify({ imageData, persona }),
     });
     const rating = await scored.json();
     // Pass the rejection straight through: 422 means the safety screen said no.
