@@ -1,0 +1,76 @@
+name: VibeCheck
+options:
+  bundleIdPrefix: com.jackmielke
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "2"
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: 2A35RW57TC
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  VibeCheck:
+    type: application
+    platform: iOS
+    sources:
+      - path: VibeCheck
+    entitlements:
+      path: VibeCheck/VibeCheck.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jackmielke.vibecheck
+        PRODUCT_NAME: Vibe Check
+        INFOPLIST_KEY_CFBundleDisplayName: Vibe Check
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_NSCameraUsageDescription: "Vibe Check needs the camera so the dog can look you in the face and rate your vibe."
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+  VibeCheckTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: VibeCheckTests
+    dependencies:
+      - target: VibeCheck
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jackmielke.vibecheck.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Vibe Check.app/Vibe Check"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+  VibeCheckUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: VibeCheckUITests
+    dependencies:
+      - target: VibeCheck
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jackmielke.vibecheck.uitests
+        TEST_TARGET_NAME: VibeCheck
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  VibeCheck:
+    build:
+      targets:
+        VibeCheck: all
+        VibeCheckTests: [test]
+        VibeCheckUITests: [test]
+    test:
+      targets:
+        - VibeCheckTests
+        - VibeCheckUITests
+    run:
+      config: Debug

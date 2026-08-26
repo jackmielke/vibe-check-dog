@@ -1,0 +1,63 @@
+import AuthenticationServices
+import SwiftUI
+
+/// Sign in with Apple, used purely to attach a real name to leaderboard posts.
+///
+/// Apple hands over the user's name only on the very first authorization, so it
+/// is persisted here. No account is created on any server: the identifier and
+/// name live in UserDefaults on this device and are cleared on sign out.
+@MainActor
+final class AppleSignIn: ObservableObject {
+    @Published private(set) var userID: String?
+    @Published private(set) var displayName: String?
+
+    private let idKey = "appleUserID"
+    private let nameKey = "appleDisplayName"
+
+    init() {
+        userID = UserDefaults.standard.string(forKey: idKey)
+        displayName = UserDefaults.standard.string(forKey: nameKey)
+    }
+
+    var isSignedIn: Bool { userID != nil }
+
+    /// The name posted to the leaderboard.
+    var postingName: String { displayName ?? "Anonymous" }
+
+    func handle(_ result: Result<ASAuthorization, Error>) {
+        guard case .success(let auth) = result,
+              let cred = auth.credential as? ASAuthorizationAppleIDCredential else { return }
+
+        let id = cred.user
+        // Only present on first authorization - keep whatever we already stored otherwise.
+        let fresh = [cred.fullName?.givenName, cred.fullName?.familyName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+
+        userID = id
+        UserDefaults.standard.set(id, forKey: idKey)
+
+        if !fresh.isEmpty {
+            displayName = fresh
+            UserDefaults.standard.set(fresh, forKey: nameKey)
+        } else if displayName == nil {
+            displayName = "Anonymous"
+            UserDefaults.standard.set("Anonymous", forKey: nameKey)
+        }
+    }
+
+    func rename(_ newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        displayName = String(trimmed.prefix(24))
+        UserDefaults.standard.set(displayName, forKey: nameKey)
+    }
+
+    func signOut() {
+        userID = nil
+        displayName = nil
+        UserDefaults.standard.removeObject(forKey: idKey)
+        UserDefaults.standard.removeObject(forKey: nameKey)
+    }
+}
