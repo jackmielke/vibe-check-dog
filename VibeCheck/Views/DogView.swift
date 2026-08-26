@@ -42,6 +42,8 @@ struct DogView: View {
     var showBody: Bool = true
     /// Eyewear tells the characters apart at a glance.
     var accessory: DogAccessory = .none
+    /// Chill Dog is the only one who is actually pleased to see you.
+    var smiling: Bool = false
 
     @State private var blink = false
     @State private var breathe = false
@@ -196,7 +198,8 @@ struct DogView: View {
             MouthShape()
                 .stroke(Theme.snout.opacity(0.75), style: StrokeStyle(lineWidth: 4 * u, lineCap: .round))
                 .frame(width: 64 * u, height: 22 * u)
-                .offset(y: 48 * u)
+                .rotationEffect(.degrees(smiling ? 180 : 0))
+                .offset(y: smiling ? 44 * u : 48 * u)
         }
     }
 

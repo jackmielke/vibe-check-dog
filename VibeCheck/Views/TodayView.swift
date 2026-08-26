@@ -314,7 +314,7 @@ enum DogLines {
         "Hmm.",
         "Interesting choice.",
         "Give me a second here.",
-        "Consulting the other dogs.",
+        "Consulting the other dawgs.",
         "Oh."
     ]
 

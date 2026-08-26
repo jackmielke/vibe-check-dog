@@ -32,10 +32,12 @@ enum Mascot: String, CaseIterable, Identifiable {
         switch self {
         case .original: return "Judges how together you look."
         case .drawn:    return "Same judge, fewer pixels."
-        case .chill:    return "Only cares how relaxed you are."
+        case .chill:    return "Only asks: how high are you?"
         case .critic:   return "Judges it as fine art."
         }
     }
+
+    var isSmiling: Bool { self == .chill }
 
     var accessory: DogAccessory {
         switch self {
@@ -69,7 +71,7 @@ struct MascotView: View {
                 .scaleEffect(mood == .thinking ? 0.97 : 1.0)
                 .animation(.spring(response: 0.4, dampingFraction: 0.7), value: mood)
         default:
-            DogView(mood: mood, size: size, accessory: mascot.accessory)
+            DogView(mood: mood, size: size, accessory: mascot.accessory, smiling: mascot.isSmiling)
         }
     }
 

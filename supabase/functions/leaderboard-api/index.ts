@@ -15,7 +15,12 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const limit = Math.min(200, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
+    const params = new URL(req.url).searchParams;
+    const limit = Math.min(200, Math.max(1, Number(params.get("limit")) || 100));
+    // "top" is the all-time board; "recent" is the feed of what just happened.
+    const order = params.get("sort") === "recent"
+      ? "created_at.desc"
+      : "score.desc,created_at.desc";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -24,7 +29,7 @@ Deno.serve(async (req) => {
     // which is the moderation lever App Review expects to exist.
     const query =
       `select=id,name,score,created_at,image_url,vibe_analysis` +
-      `&is_hidden=is.false&order=score.desc,created_at.desc&limit=${limit}`;
+      `&is_hidden=is.false&order=${order}&limit=${limit}`;
 
     const res = await fetch(`${supabaseUrl}/rest/v1/leaderboard?${query}`, {
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },

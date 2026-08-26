@@ -40,11 +40,38 @@ final class VibeCheckUITests: XCTestCase {
     func testLeaderboardLoadsRealEntries() {
         let app = launch()
         app.tabBars.buttons["Leaderboard"].tap()
-        XCTAssertTrue(app.navigationBars["Leaderboard"].waitForExistence(timeout: 6))
-        // The backend is live, so at least one row should arrive.
-        let firstCell = app.scrollViews.otherElements.staticTexts.firstMatch
-        XCTAssertTrue(firstCell.waitForExistence(timeout: 25) || app.staticTexts.count > 3,
+        XCTAssertTrue(app.navigationBars["Vibe Leaderboard"].waitForExistence(timeout: 6))
+        // The backend is live, so rows should arrive.
+        XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 30),
                       "Leaderboard should render entries from the live backend")
+    }
+
+    func testLeaderboardSortTogglesBetweenTopAndRecent() {
+        let app = launch()
+        app.tabBars.buttons["Leaderboard"].tap()
+        XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 30))
+
+        // "Top vibes" is score-ordered, so the first row should be a high score.
+        let topFirst = app.cells.firstMatch.staticTexts.allElementsBoundByIndex.map(\.label)
+
+        app.buttons["Most recent"].tap()
+        XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 30))
+        // Give the reload a moment to replace the rows.
+        Thread.sleep(forTimeInterval: 3)
+        let recentFirst = app.cells.firstMatch.staticTexts.allElementsBoundByIndex.map(\.label)
+
+        XCTAssertNotEqual(topFirst, recentFirst,
+                          "Switching to Most recent should change which entry is first")
+    }
+
+    func testTappingAnEntryOpensDetail() {
+        let app = launch()
+        app.tabBars.buttons["Leaderboard"].tap()
+        XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 30))
+        app.cells.firstMatch.tap()
+        // The detail view is titled with the poster's name and shows a back button.
+        XCTAssertTrue(app.navigationBars.buttons.firstMatch.waitForExistence(timeout: 6),
+                      "Tapping a leaderboard entry should push a detail view")
     }
 
     func testCaptureScreenshots() {

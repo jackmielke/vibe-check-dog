@@ -92,8 +92,10 @@ enum VibeAPI {
 
     // MARK: - Leaderboard
 
-    static func leaderboard(limit: Int = 100) async throws -> [LeaderboardEntry] {
-        let data = try await send(request("leaderboard-api?limit=\(limit)", method: "GET"))
+    enum Sort: String { case top, recent }
+
+    static func leaderboard(limit: Int = 100, sort: Sort = .top) async throws -> [LeaderboardEntry] {
+        let data = try await send(request("leaderboard-api?limit=\(limit)&sort=\(sort.rawValue)", method: "GET"))
         struct Wrapper: Decodable { let success: Bool; let data: [LeaderboardEntry] }
         guard let w = try? JSONDecoder().decode(Wrapper.self, from: data) else { throw APIError.decoding }
         return w.data
