@@ -3,8 +3,10 @@ import UIKit
 /// Talks to the existing Supabase edge functions behind Vibe Check.
 /// The anon key is a publishable key - it is designed to ship in clients.
 enum VibeAPI {
-    private static let base = "https://hzrdpoyxamsptfbgrhru.supabase.co/functions/v1"
-    private static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6cmRwb3l4YW1zcHRmYmdyaHJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4MDA0MzUsImV4cCI6MjA3NjM3NjQzNX0.WPUeaxtfH-wyGK7BUKNUT8V1FgO63ygEiKTva-j7GAU"
+    // Jack's own Supabase project. Scoring runs on OpenRouter with the key held
+    // server-side; the app only ever holds the publishable key.
+    private static let base = "https://hkakpvfytmuqpjympmwx.supabase.co/functions/v1"
+    private static let anonKey = "sb_publishable_dogOXtLQrX6WzGrNO7hIQw_Qn3FHgns"
 
     enum APIError: LocalizedError {
         case badResponse(Int)
@@ -29,6 +31,7 @@ enum VibeAPI {
         var r = URLRequest(url: URL(string: "\(base)/\(path)")!)
         r.httpMethod = method
         r.setValue(anonKey, forHTTPHeaderField: "apikey")
+        r.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
         r.httpBody = body
         r.timeoutInterval = 90        // vision models are not fast
@@ -66,13 +69,24 @@ enum VibeAPI {
     }
 
     /// Scores a photo, uploads it, and puts it on the public leaderboard.
-    static func submit(image: UIImage, name: String) async throws -> LeaderboardEntry {
-        let payload = ["imageData": image.vibeDataURL(), "name": name]
+    /// `ownerKey` is what later lets this device delete its own posts.
+    static func submit(image: UIImage, name: String, ownerKey: String) async throws -> LeaderboardEntry {
+        let payload = ["imageData": image.vibeDataURL(), "name": name, "ownerKey": ownerKey]
         let body = try JSONSerialization.data(withJSONObject: payload)
         let data = try await send(request("submit-vibe", method: "POST", body: body))
         struct Wrapper: Decodable { let success: Bool; let data: LeaderboardEntry }
         guard let w = try? JSONDecoder().decode(Wrapper.self, from: data) else { throw APIError.decoding }
         return w.data
+    }
+
+    /// Removes this owner's posts from the public leaderboard, photos included.
+    /// Used by account deletion, which App Review requires for Sign in with Apple.
+    @discardableResult
+    static func deletePosts(ownerKey: String) async throws -> Int {
+        let body = try JSONSerialization.data(withJSONObject: ["ownerKey": ownerKey])
+        let data = try await send(request("delete-vibe", method: "POST", body: body))
+        struct Wrapper: Decodable { let success: Bool; let deleted: Int }
+        return (try? JSONDecoder().decode(Wrapper.self, from: data))?.deleted ?? 0
     }
 
     // MARK: - Leaderboard

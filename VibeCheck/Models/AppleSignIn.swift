@@ -13,6 +13,7 @@ final class AppleSignIn: ObservableObject {
 
     private let idKey = "appleUserID"
     private let nameKey = "appleDisplayName"
+    private let ownerKeyKey = "vibeOwnerKey"
 
     init() {
         userID = UserDefaults.standard.string(forKey: idKey)
@@ -20,6 +21,17 @@ final class AppleSignIn: ObservableObject {
     }
 
     var isSignedIn: Bool { userID != nil }
+
+    /// Stable random identifier, created once per install, used only to prove
+    /// ownership of leaderboard posts so they can be deleted later. It is not
+    /// derived from the Apple account and identifies nobody. It deliberately
+    /// survives sign-out, so signing back in still owns the same posts.
+    var ownerKey: String {
+        if let existing = UserDefaults.standard.string(forKey: ownerKeyKey) { return existing }
+        let fresh = UUID().uuidString
+        UserDefaults.standard.set(fresh, forKey: ownerKeyKey)
+        return fresh
+    }
 
     /// The name posted to the leaderboard.
     var postingName: String { displayName ?? "Anonymous" }
@@ -59,5 +71,12 @@ final class AppleSignIn: ObservableObject {
         displayName = nil
         UserDefaults.standard.removeObject(forKey: idKey)
         UserDefaults.standard.removeObject(forKey: nameKey)
+    }
+
+    /// Full deletion: forget the account *and* the ownership key, after posts
+    /// have been removed server-side.
+    func forgetEverything() {
+        signOut()
+        UserDefaults.standard.removeObject(forKey: ownerKeyKey)
     }
 }

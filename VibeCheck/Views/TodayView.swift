@@ -252,7 +252,7 @@ struct TodayView: View {
         posting = true
         defer { posting = false }
         do {
-            _ = try await VibeAPI.submit(image: image, name: auth.postingName)
+            _ = try await VibeAPI.submit(image: image, name: auth.postingName, ownerKey: auth.ownerKey)
             store.markPosted(check)
             if let updated = store.checks.first(where: { $0.id == check.id }) {
                 withAnimation { phase = .result(updated) }

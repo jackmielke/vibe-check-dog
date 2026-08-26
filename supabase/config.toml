@@ -1,0 +1,16 @@
+project_id = "hkakpvfytmuqpjympmwx"
+
+# The app ships only the publishable key, so these are called without a user JWT.
+# Authorisation is enforced inside each function instead: writes are service-role
+# only, and delete-vibe is scoped by a caller-supplied owner_key.
+[functions.analyze-vibe]
+verify_jwt = false
+
+[functions.submit-vibe]
+verify_jwt = false
+
+[functions.leaderboard-api]
+verify_jwt = false
+
+[functions.delete-vibe]
+verify_jwt = false

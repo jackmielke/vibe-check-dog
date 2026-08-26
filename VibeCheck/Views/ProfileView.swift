@@ -7,6 +7,8 @@ struct ProfileView: View {
     @State private var editingName = false
     @State private var draftName = ""
     @State private var confirmClear = false
+    @State private var deleting = false
+    @State private var deleteError: String?
 
     var body: some View {
         ZStack {
@@ -166,6 +168,22 @@ struct ProfileView: View {
         }
     }
 
+    /// Server first: if the leaderboard delete fails we stop and say so, rather
+    /// than wiping the local ownership key and orphaning the posts forever.
+    private func deleteEverything() async {
+        deleting = true
+        deleteError = nil
+        defer { deleting = false }
+        do {
+            try await VibeAPI.deletePosts(ownerKey: auth.ownerKey)
+        } catch {
+            deleteError = "Could not remove your leaderboard posts: \(error.localizedDescription)"
+            return
+        }
+        store.clearAll()
+        auth.forgetEverything()
+    }
+
     private var dangerCard: some View {
         VStack(spacing: 10) {
             if auth.isSignedIn {
@@ -174,21 +192,28 @@ struct ProfileView: View {
                     .foregroundStyle(Theme.muted)
             }
             Button(role: .destructive) { confirmClear = true } label: {
-                Text("Delete all my data on this phone")
-                    .font(.system(size: 15, weight: .medium))
+                if deleting {
+                    ProgressView().tint(Theme.muted)
+                } else {
+                    Text("Delete my account and all my data")
+                        .font(.system(size: 15, weight: .medium))
+                }
             }
-            .disabled(store.checks.isEmpty && !auth.isSignedIn)
+            .disabled(deleting)
+            if let deleteError {
+                Text(deleteError)
+                    .font(.caption)
+                    .foregroundStyle(Theme.scoreColor(10))
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity)
         .vibeCard(16)
         .alert("Delete everything on this phone?", isPresented: $confirmClear) {
-            Button("Delete", role: .destructive) {
-                store.clearAll()
-                auth.signOut()
-            }
+            Button("Delete", role: .destructive) { Task { await deleteEverything() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your local vibe checks, photos, and sign-in will be removed. Anything already posted to the leaderboard stays there - email jackcmielke@gmail.com to have it taken down.")
+            Text("This removes your posts and photos from the leaderboard, then deletes your vibe checks and sign-in from this phone. It cannot be undone.")
         }
     }
 }
