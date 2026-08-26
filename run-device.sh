@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs Vibe Check straight onto Jack's iPhone over USB or Wi-Fi, no TestFlight.
+# Installs Vibe Check straight onto the connected iPhone. No TestFlight, no review.
 #
 #   ./run-device.sh            # install the already-built ipa and launch it
 #   ./run-device.sh --rebuild  # rebuild from source first
@@ -31,13 +31,28 @@ fi
 
 [[ -f "$IPA" ]] || { echo "No build found. Run: ./run-device.sh --rebuild"; exit 1; }
 
-echo "==> Looking for the phone (unlock it and plug it in if this hangs)"
-DEVICE=$(xcrun devicectl list devices 2>/dev/null \
-  | awk '/iPhone/ && !/unavailable/ {print $(NF-2); exit}')
+# Parse the JSON, not the table: device names contain spaces, so column offsets
+# in the text output shift and awk picks the wrong field.
+PICK='
+import json, sys
+try:
+    devices = json.load(open(sys.argv[1]))["result"]["devices"]
+except Exception:
+    sys.exit(0)
+for d in devices:
+    c = d.get("connectionProperties", {})
+    if c.get("pairingState") == "paired" and c.get("tunnelState") != "unavailable":
+        print(d["identifier"]); break
+'
+
+echo "==> Looking for the phone"
+DEVJSON=$(mktemp)
+xcrun devicectl list devices --json-output "$DEVJSON" >/dev/null 2>&1 || true
+DEVICE=$(python3 -c "$PICK" "$DEVJSON")
+rm -f "$DEVJSON"
 
 if [[ -z "$DEVICE" ]]; then
   echo "No reachable iPhone. Unlock it, plug it in, trust this Mac, then re-run."
-  echo "Currently visible:"
   xcrun devicectl list devices 2>/dev/null | tail -n +3
   exit 1
 fi
@@ -46,4 +61,5 @@ echo "==> Installing to $DEVICE"
 xcrun devicectl device install app --device "$DEVICE" "$IPA"
 echo "==> Launching"
 xcrun devicectl device process launch --device "$DEVICE" "$BUNDLE" || true
-echo "Done. If iOS blocks it, go to Settings > General > VPN & Device Management and trust the developer."
+echo
+echo "Done. If iOS refuses to open it: Settings > General > VPN & Device Management > trust the developer."

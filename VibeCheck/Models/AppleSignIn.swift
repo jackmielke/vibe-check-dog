@@ -10,6 +10,9 @@ import SwiftUI
 final class AppleSignIn: ObservableObject {
     @Published private(set) var userID: String?
     @Published private(set) var displayName: String?
+    /// Surfaced in the UI. Previously a failed authorization was swallowed
+    /// silently, so tapping the button appeared to do nothing at all.
+    @Published var lastError: String?
 
     private let idKey = "appleUserID"
     private let nameKey = "appleDisplayName"
@@ -21,6 +24,11 @@ final class AppleSignIn: ObservableObject {
     }
 
     var isSignedIn: Bool { userID != nil }
+
+    /// Posting needs a name, not necessarily an Apple account. Sign in with
+    /// Apple is the quick path; typing a name is the fallback so the
+    /// leaderboard is never blocked by an auth problem.
+    var canPost: Bool { displayName?.isEmpty == false }
 
     /// Stable random identifier, created once per install, used only to prove
     /// ownership of leaderboard posts so they can be deleted later. It is not
@@ -37,8 +45,26 @@ final class AppleSignIn: ObservableObject {
     var postingName: String { displayName ?? "Anonymous" }
 
     func handle(_ result: Result<ASAuthorization, Error>) {
-        guard case .success(let auth) = result,
-              let cred = auth.credential as? ASAuthorizationAppleIDCredential else { return }
+        switch result {
+        case .failure(let error):
+            // A user-cancelled sheet is not worth shouting about; anything else is.
+            if let asError = error as? ASAuthorizationError, asError.code == .canceled {
+                lastError = nil
+            } else {
+                lastError = "Apple sign-in failed: \(error.localizedDescription). You can just type a name instead."
+            }
+            return
+        case .success(let auth):
+            guard let cred = auth.credential as? ASAuthorizationAppleIDCredential else {
+                lastError = "Apple returned an unexpected credential. Type a name instead."
+                return
+            }
+            apply(cred)
+        }
+    }
+
+    private func apply(_ cred: ASAuthorizationAppleIDCredential) {
+        lastError = nil
 
         let id = cred.user
         // Only present on first authorization - keep whatever we already stored otherwise.
