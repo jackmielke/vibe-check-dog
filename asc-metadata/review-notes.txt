@@ -1,0 +1,63 @@
+WHAT THIS APP IS
+A comedy app. The user takes a photo of themselves, an AI model scores it 0-100 and writes one
+short joke line about it, and the user can optionally post that result to a public leaderboard.
+Target audience: general, 17+. The value is a quick shareable laugh and a light daily habit.
+
+HOW TO USE IT (no account or credentials required)
+1. Launch. The Today tab shows a dog and a "Take my vibe check" button.
+2. Tap it and allow camera access. An in-app camera opens, front-facing.
+3. Press the white shutter. A score, emoji, and caption appear in a few seconds. THIS WORKS
+   WITHOUT SIGNING IN and the result stays only on the device.
+4. Leaderboard tab: public posts from all users, sortable by Top vibes or Most recent. Tap any
+   row for a full-size detail view.
+5. You tab: optional sign-in, character picker, statistics, and data deletion.
+NO DEMO ACCOUNT IS NEEDED. Every core feature except posting works signed out.
+
+SIGN-IN AND ACCOUNT DELETION
+Sign in with Apple is optional and is used only to attach a display name to a public post. A user
+can instead type any display name. No account is created on our server; the Apple identifier
+stays on device. Account deletion is in the app at You -> "Delete my account and all my data".
+It calls a server endpoint that deletes the user's leaderboard posts and their stored photos,
+then erases local data. It is reachable without contacting support.
+
+USER-GENERATED CONTENT AND MODERATION
+The leaderboard is user-submitted photos, so there are three layers:
+1. Pre-publication screening. Every photo passes an automated safety classifier before it can be
+   stored or posted. Nudity or sexual content, apparent minors in inappropriate contexts, graphic
+   violence, and hate symbols are rejected and never reach storage or the leaderboard.
+2. In-app reporting and hiding. Press and hold any entry for "Hide this post" (immediate and
+   permanent for that user) or "Report" (hides it and emails the developer the post id).
+3. Server-side takedown via an is_hidden flag, which drops a row from the public feed in seconds
+   with no app update.
+Contact for reports and takedowns is published in the app, in the support page, and in the
+privacy policy: jackcmielke@gmail.com
+
+EXTERNAL SERVICES USED
+- Supabase (database, storage, serverless functions) hosts the leaderboard and photos.
+- OpenRouter, calling a Google Gemini vision model, produces the score, caption, and safety
+  verdict. The API key is server-side and never in the app binary.
+- Sign in with Apple, for the optional display name only.
+No analytics, advertising, crash reporting, or payment SDKs.
+
+PERMISSIONS
+Camera only, requested at the moment the user taps "Take my vibe check", with the purpose string
+"Vibe Check needs the camera so the dog can look you in the face and rate your vibe." No location,
+contacts, microphone, photo library, notifications, or App Tracking Transparency prompts.
+
+PURCHASES
+None. No in-app purchases, subscriptions, paid content, or paywalls. The app is free in full.
+
+REGIONAL DIFFERENCES
+None. The app behaves identically on every storefront. Content is English (en-US) only. There is
+no geo-gating and no region-specific content or pricing.
+
+REGULATED INDUSTRY / THIRD-PARTY MATERIAL
+Not a regulated industry. All characters and artwork are original and drawn for this app. All
+written content is original. No third-party trademarks, likenesses, or licensed material appear.
+The app states in the You tab and in its description that it is a joke.
+
+DEVICES AND OS TESTED BEFORE SUBMISSION
+- iPhone 17, iOS 26.6 (physical device, primary test target)
+- iPhone 16 Pro Max and iPhone 16 Plus simulators, iOS 26.5
+- Distributed and installed through TestFlight before submission; beta review approved.
+Automated coverage: 12 unit and UI tests run against the live backend on every build.
