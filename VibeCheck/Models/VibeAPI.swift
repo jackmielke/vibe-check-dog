@@ -94,11 +94,59 @@ enum VibeAPI {
 
     enum Sort: String { case top, recent }
 
-    static func leaderboard(limit: Int = 100, sort: Sort = .top) async throws -> [LeaderboardEntry] {
-        let data = try await send(request("leaderboard-api?limit=\(limit)&sort=\(sort.rawValue)", method: "GET"))
+    /// Passing `viewer` (this device's ownerKey) makes the server drop everything
+    /// posted by anyone this device has blocked, so a block holds even after a
+    /// reinstall clears the local copy of the list.
+    static func leaderboard(limit: Int = 100, sort: Sort = .top,
+                            viewer: String? = nil) async throws -> [LeaderboardEntry] {
+        var path = "leaderboard-api?limit=\(limit)&sort=\(sort.rawValue)"
+        if let viewer, let escaped = viewer.addingPercentEncoding(withAllowedCharacters: .alphanumerics) {
+            path += "&viewer=\(escaped)"
+        }
+        let data = try await send(request(path, method: "GET"))
         struct Wrapper: Decodable { let success: Bool; let data: [LeaderboardEntry] }
         guard let w = try? JSONDecoder().decode(Wrapper.self, from: data) else { throw APIError.decoding }
         return w.data
+    }
+
+    // MARK: - Moderation
+    //
+    // Guideline 1.2 wants a user to be able to block an abusive *person*, not
+    // just dismiss one post, and wants the developer told when it happens. Both
+    // go through the `moderate` function, which is the only writer.
+
+    private static func moderate(_ payload: [String: Any]) async throws -> Data {
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await send(request("moderate", method: "POST", body: body))
+    }
+
+    /// Blocks everyone's posts by the author of `posterID`, for this device.
+    static func block(ownerKey: String, posterID: String, entryID: String? = nil) async throws {
+        var payload: [String: Any] = ["action": "block", "ownerKey": ownerKey, "posterId": posterID]
+        if let entryID { payload["entryId"] = entryID }
+        _ = try await moderate(payload)
+    }
+
+    static func unblock(ownerKey: String, posterID: String) async throws {
+        _ = try await moderate(["action": "unblock", "ownerKey": ownerKey, "posterId": posterID])
+    }
+
+    /// The poster IDs this device has blocked, straight from the server.
+    static func blockedPosters(ownerKey: String) async throws -> [String] {
+        let data = try await moderate(["action": "list", "ownerKey": ownerKey])
+        struct Wrapper: Decodable { let success: Bool; let data: [String] }
+        return (try? JSONDecoder().decode(Wrapper.self, from: data))?.data ?? []
+    }
+
+    /// Files a report against one post. Returns true if that report was the one
+    /// that pulled the post off the public board.
+    @discardableResult
+    static func report(ownerKey: String, entryID: String, reason: String? = nil) async throws -> Bool {
+        var payload: [String: Any] = ["action": "report", "ownerKey": ownerKey, "entryId": entryID]
+        if let reason { payload["reason"] = reason }
+        let data = try await moderate(payload)
+        struct Wrapper: Decodable { let success: Bool; let autoHidden: Bool }
+        return (try? JSONDecoder().decode(Wrapper.self, from: data))?.autoHidden ?? false
     }
 }
 

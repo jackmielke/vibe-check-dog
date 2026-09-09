@@ -4,6 +4,7 @@ import AuthenticationServices
 struct ProfileView: View {
     @EnvironmentObject private var store: VibeStore
     @EnvironmentObject private var auth: AppleSignIn
+    @EnvironmentObject private var blocks: BlockList
     @State private var editingName = false
     @State private var draftName = ""
     @State private var confirmClear = false
@@ -23,6 +24,7 @@ struct ProfileView: View {
                     soundCard
                     statsCard
                     if !store.checks.isEmpty { historySection }
+                    blockedCard
                     dangerCard
                     Text("Vibe Check is a joke. The dog is not a real judge of anything.")
                         .font(.caption)
@@ -277,6 +279,44 @@ struct ProfileView: View {
         }
         store.clearAll()
         auth.forgetEverything()
+    }
+
+    /// Blocking has to be reversible, and a reviewer has to be able to find the
+    /// list. Both live here rather than being buried in the leaderboard.
+    @ViewBuilder
+    private var blockedCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Blocked accounts")
+                .font(Theme.display(17, .bold))
+                .foregroundStyle(Theme.cream)
+
+            if blocks.blocked.isEmpty {
+                Text("You haven't blocked anyone. Swipe left on any leaderboard post, or press and hold it, to block or report.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(Array(blocks.blocked).sorted(), id: \.self) { posterID in
+                    HStack {
+                        // There is deliberately no name here: the poster's
+                        // identity is a one-way pseudonym, so a short prefix is
+                        // all there is to show.
+                        Text("Blocked account \(posterID.prefix(6))")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(Theme.cream)
+                        Spacer()
+                        Button("Unblock") {
+                            Task { try? await blocks.unblock(posterID, ownerKey: auth.ownerKey) }
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .vibeCard(16)
+        .task { await blocks.sync(ownerKey: auth.ownerKey) }
     }
 
     private var dangerCard: some View {

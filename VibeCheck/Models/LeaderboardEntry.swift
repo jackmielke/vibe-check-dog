@@ -8,12 +8,17 @@ struct LeaderboardEntry: Identifiable, Codable, Equatable {
     let createdAt: Date?
     let imageURL: String?
     let vibeAnalysis: String?
+    /// One-way pseudonym for whoever posted this, stable across all of their
+    /// rows. The poster's real owner_key never leaves the server, so this is
+    /// what "block this user" actually blocks.
+    let posterID: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, score
         case createdAt = "created_at"
         case imageURL = "image_url"
         case vibeAnalysis = "vibe_analysis"
+        case posterID = "poster_id"
     }
 
     init(from decoder: Decoder) throws {
@@ -23,6 +28,7 @@ struct LeaderboardEntry: Identifiable, Codable, Equatable {
         score = LeaderboardEntry.decodeScore(from: c)
         imageURL = try? c.decodeIfPresent(String.self, forKey: .imageURL)
         vibeAnalysis = try? c.decodeIfPresent(String.self, forKey: .vibeAnalysis)
+        posterID = try? c.decodeIfPresent(String.self, forKey: .posterID)
         // Postgres timestamps arrive with fractional seconds; the plain
         // ISO8601 formatter rejects those, so try both shapes.
         if let raw = try? c.decodeIfPresent(String.self, forKey: .createdAt) ?? nil {
@@ -32,9 +38,11 @@ struct LeaderboardEntry: Identifiable, Codable, Equatable {
         }
     }
 
-    init(id: String, name: String, score: Int, createdAt: Date?, imageURL: String?, vibeAnalysis: String?) {
+    init(id: String, name: String, score: Int, createdAt: Date?, imageURL: String?,
+         vibeAnalysis: String?, posterID: String? = nil) {
         self.id = id; self.name = name; self.score = score
         self.createdAt = createdAt; self.imageURL = imageURL; self.vibeAnalysis = vibeAnalysis
+        self.posterID = posterID
     }
 
     /// The model occasionally returns a fractional score (88.5), and older rows

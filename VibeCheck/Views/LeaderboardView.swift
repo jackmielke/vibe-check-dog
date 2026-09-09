@@ -1,14 +1,23 @@
 import SwiftUI
 
 struct LeaderboardView: View {
+    @EnvironmentObject private var auth: AppleSignIn
+    @EnvironmentObject private var blocks: BlockList
     @State private var entries: [LeaderboardEntry] = []
     @State private var loading = true
     @State private var error: String?
     @State private var sort: VibeAPI.Sort = .top
+    @State private var pendingBlock: LeaderboardEntry?
+    @State private var notice: String?
     @AppStorage("hiddenEntryIDs") private var hiddenRaw: String = ""
 
     private var hidden: Set<String> { Set(hiddenRaw.split(separator: ",").map(String.init)) }
-    private var visible: [LeaderboardEntry] { entries.filter { !hidden.contains($0.id) } }
+
+    /// Blocked posters are filtered here as well as on the server so the row
+    /// vanishes the instant Block is tapped, rather than on the next refresh.
+    private var visible: [LeaderboardEntry] {
+        entries.filter { !hidden.contains($0.id) && !blocks.isBlocked($0.posterID) }
+    }
 
     var body: some View {
         ZStack {
@@ -21,6 +30,25 @@ struct LeaderboardView: View {
         .navigationTitle("Vibe Leaderboard")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: sort) { await load() }
+        .task { await blocks.sync(ownerKey: auth.ownerKey) }
+        .confirmationDialog(
+            pendingBlock.map { "Block \($0.name)?" } ?? "Block this user?",
+            isPresented: Binding(get: { pendingBlock != nil }, set: { if !$0 { pendingBlock = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Block", role: .destructive) {
+                if let entry = pendingBlock { Task { await block(entry) } }
+                pendingBlock = nil
+            }
+            Button("Cancel", role: .cancel) { pendingBlock = nil }
+        } message: {
+            Text("You won't see anything they post, and we'll review their content.")
+        }
+        .alert("Thanks", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button("OK") { notice = nil }
+        } message: {
+            Text(notice ?? "")
+        }
     }
 
     private var sortPicker: some View {
@@ -56,6 +84,19 @@ struct LeaderboardView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    // The context menu is the discoverable path, but a long
+                    // press is easy for a reviewer to miss, so the same two
+                    // controls are swipe actions too.
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        if entry.posterID != nil {
+                            Button { pendingBlock = entry } label: {
+                                Label("Block", systemImage: "hand.raised")
+                            }
+                            .tint(.red)
+                        }
+                        Button { report(entry) } label: { Label("Report", systemImage: "flag") }
+                            .tint(.orange)
+                    }
                 }
             }
             .listStyle(.plain)
@@ -99,7 +140,14 @@ struct LeaderboardView: View {
         .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.card))
         .contextMenu {
             Button { hide(entry) } label: { Label("Hide this post", systemImage: "eye.slash") }
-            Button(role: .destructive) { report(entry) } label: { Label("Report", systemImage: "flag") }
+            Button(role: .destructive) { report(entry) } label: {
+                Label("Report", systemImage: "flag")
+            }
+            if entry.posterID != nil {
+                Button(role: .destructive) { pendingBlock = entry } label: {
+                    Label("Block \(entry.name)", systemImage: "hand.raised")
+                }
+            }
         }
     }
 
@@ -118,11 +166,17 @@ struct LeaderboardView: View {
         loading = true
         defer { loading = false }
         do {
-            entries = try await VibeAPI.leaderboard(sort: sort)
+            entries = try await VibeAPI.leaderboard(sort: sort, viewer: auth.ownerKey)
             error = nil
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    private func block(_ entry: LeaderboardEntry) async {
+        guard let posterID = entry.posterID else { return }
+        await blocks.block(posterID, ownerKey: auth.ownerKey, entryID: entry.id)
+        notice = "You won't see posts from \(entry.name) again. You can undo this in your profile."
     }
 
     private func hide(_ entry: LeaderboardEntry) {
@@ -131,14 +185,20 @@ struct LeaderboardView: View {
         hiddenRaw = ids.joined(separator: ",")
     }
 
+    /// Reporting used to open a mail composer, which meant a report only existed
+    /// if the reporter had Mail configured and actually sent it. It now files
+    /// server-side, so every report is recorded whether or not the user has
+    /// email, and enough reports pull the post off the board on their own.
     private func report(_ entry: LeaderboardEntry) {
         hide(entry)
-        var c = URLComponents(string: "mailto:jackcmielke@gmail.com")
-        c?.queryItems = [
-            URLQueryItem(name: "subject", value: "Vibe Check report: \(entry.id)"),
-            URLQueryItem(name: "body", value: "Reporting this post.\n\nPost ID: \(entry.id)\nName: \(entry.name)\nScore: \(entry.score)\n\nReason:")
-        ]
-        if let url = c?.url { UIApplication.shared.open(url) }
+        notice = "Thanks for the report. We review flagged posts within 24 hours."
+        Task {
+            do {
+                try await VibeAPI.report(ownerKey: auth.ownerKey, entryID: entry.id)
+            } catch {
+                print("Report did not reach the server: \(error)")
+            }
+        }
     }
 }
 
