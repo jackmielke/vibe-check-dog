@@ -19,7 +19,7 @@
 <body>
 <div class="wrap">
   <h1>Vibe Check - Privacy Policy</h1>
-  <p class="muted">Last updated: September 11, 2026</p>
+  <p class="muted">Last updated: September 14, 2026</p>
 
   <p>Vibe Check is a playful entertainment app with a <strong>public community leaderboard</strong>.
   This policy explains exactly what is and isn't shared.</p>
@@ -34,6 +34,30 @@
   yourself or people who agreed to be shared. Before public storage, a reduced copy is sent through
   our Supabase service to OpenRouter (Google Gemini) for a fail-closed safety check. If the check flags unsafe material
   or is unavailable, no public post is created.</p>
+
+
+  <h2 id="face-data">Face data</h2>
+  <p><strong>What is collected.</strong> When you take or choose a photo for a vibe check, the app runs
+  Apple's on-device Vision framework to detect whether a face is present and to estimate a few
+  expression cues (smile, open eyes, framing, head pose, capture quality). These are turned into
+  numeric scores between 0 and 100 (for example "Smile 72"). The app does not create a face
+  template, faceprint, or any other biometric identifier, does not identify or recognize who is in
+  the photo, and does not compare faces across photos or users.</p>
+  <p><strong>Use.</strong> Face detection and expression cues are used only to produce the playful
+  vibe score, factor breakdown, and caption you see. They are not used for authentication,
+  advertising, profiling, tracking, or any other purpose.</p>
+  <p><strong>Storage and retention.</strong> Face landmarks and expression measurements exist only
+  in memory on your device while a score is computed and are discarded immediately afterward. They
+  are never written to disk and never sent to our servers. Only the resulting numeric scores are
+  kept, alongside the photo, in your private on-device history, until you delete the entry or the
+  app. If you choose <strong>Post to Board</strong>, the photo and those numeric scores are stored
+  by our service as part of your public post until you delete your account, remove the post, or
+  moderation removes it.</p>
+  <p><strong>Sharing.</strong> No face landmarks or expression measurements are shared with anyone.
+  The resized photo itself is sent to OpenRouter (Google Gemini) for automated scoring and, if you
+  post, for a safety check, as described above; our service does not extract or store face
+  geometry from it, and does not keep a copy of the photo after returning the result. Face data is
+  never sold, never used for advertising, and never shared with data brokers.</p>
 
   <h2>What we collect</h2>
   <ul>
